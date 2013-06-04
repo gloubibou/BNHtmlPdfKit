@@ -25,15 +25,12 @@
 
 @implementation BNHtmlPdfKitPageRenderer
 
-@synthesize topAndBottomMarginSize = _topAndBottomMarginSize;
-@synthesize leftAndRightMarginSize = _leftAndRightMarginSize;
-
 - (CGRect)paperRect {
 	return UIGraphicsGetPDFContextBounds();
 }
 
 - (CGRect)printableRect {
-	return CGRectInset([self paperRect], _leftAndRightMarginSize, _topAndBottomMarginSize);
+	return CGRectInset([self paperRect], self.leftAndRightMarginSize, self.topAndBottomMarginSize);
 }
 
 @end
@@ -52,14 +49,6 @@
 
 
 @implementation BNHtmlPdfKit
-
-#pragma mark - Accessors
-
-@synthesize pageSize = _pageSize;
-@synthesize customPageSize = _customPageSize;
-@synthesize topAndBottomMarginSize = _topAndBottomMarginSize;
-@synthesize leftAndRightMarginSize = _leftAndRightMarginSize;
-@synthesize delegate = _delegate;
 
 #pragma mark - Initializers
 
@@ -100,7 +89,7 @@
 #pragma mark - Methods
 
 - (CGSize)actualPageSize {
-	return [self _sizeFromPageSize:_pageSize];
+	return [self _sizeFromPageSize:self.pageSize];
 }
 
 - (void)saveHtmlAsPdf:(NSString *)html {
@@ -108,7 +97,7 @@
 }
 
 - (void)saveHtmlAsPdf:(NSString *)html toFile:(NSString *)file {
-	_outputFile = file;
+	self.outputFile = file;
 
 	UIWebView *webView = [[UIWebView alloc] init];
 	webView.delegate = self;
@@ -120,7 +109,7 @@
 }
 
 - (void)saveUrlAsPdf:(NSURL *)url toFile:(NSString *)file {
-	_outputFile = file;
+	self.outputFile = file;
 
 	UIWebView *webView = [[UIWebView alloc] init];
 	webView.delegate = self;
@@ -136,8 +125,8 @@
 	UIPrintFormatter *formatter = webView.viewPrintFormatter;
 
 	BNHtmlPdfKitPageRenderer *renderer = [[BNHtmlPdfKitPageRenderer alloc] init];
-	renderer.topAndBottomMarginSize = _topAndBottomMarginSize;
-	renderer.leftAndRightMarginSize = _leftAndRightMarginSize;
+	renderer.topAndBottomMarginSize = self.topAndBottomMarginSize;
+	renderer.leftAndRightMarginSize = self.leftAndRightMarginSize;
 
 	[renderer addPrintFormatter:formatter startingAtPageAtIndex:0];
 
@@ -168,22 +157,28 @@
     [metadata setValue:mainDocumentURL forKey:@"mainDocumentURL"];
     [metadata setValue:pageTitle forKey:@"pageTitle"];
 
-	if ([_delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfData:metadata:)]) {
-		[_delegate htmlPdfKit:self didSavePdfData:currentReportData metadata:metadata];
+	id <BNHtmlPdfKitDelegate> delegate = self.delegate;
+	
+	if ([delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfData:metadata:)]) {
+		[delegate htmlPdfKit:self didSavePdfData:currentReportData metadata:metadata];
 	}
 
-	if (_outputFile) {
-		[currentReportData writeToFile:_outputFile atomically:YES];
+	NSString *outputFile = self.outputFile;
+	
+	if (outputFile) {
+		[currentReportData writeToFile:outputFile atomically:YES];
 
-		if ([_delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfFile:)]) {
-			[_delegate htmlPdfKit:self didSavePdfFile:_outputFile];
+		if ([delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfFile:)]) {
+			[delegate htmlPdfKit:self didSavePdfFile:outputFile];
 		}
 	}
 }
 
 -(void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
-	if ([_delegate respondsToSelector:@selector(htmlPdfKit:didFailWithError:)]) {
-		[_delegate htmlPdfKit:self didFailWithError:error];
+	id <BNHtmlPdfKitDelegate> delegate = self.delegate;
+
+	if ([delegate respondsToSelector:@selector(htmlPdfKit:didFailWithError:)]) {
+		[delegate htmlPdfKit:self didFailWithError:error];
 	}
 }
 
@@ -296,7 +291,7 @@
 		case BNPageSizeJapaneseB12:
 			return BNSizeMakeWithPPI(0.63f, 0.87f);
 		case BNPageSizeCustom:
-			return _customPageSize;
+			return self.customPageSize;
 	}
 	return CGSizeZero;
 }
