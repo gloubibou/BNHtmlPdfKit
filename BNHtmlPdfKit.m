@@ -296,5 +296,16 @@
 	return CGSizeZero;
 }
 
+#pragma mark - Class Methods
+
++ (BNPageSize)defaultPageSize
+{
+	NSLocale *locale = [NSLocale currentLocale];
+	BOOL useMetric = [[locale objectForKey:NSLocaleUsesMetricSystem] boolValue];
+	BNPageSize pageSize = (useMetric ? BNPageSizeA4 : BNPageSizeLetter);
+
+	return pageSize;
+}
+
 @end
 
