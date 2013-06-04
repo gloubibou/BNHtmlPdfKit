@@ -41,14 +41,15 @@
 
 #pragma mark - BNHtmlPdfKit Implementation
 
-@interface BNHtmlPdfKit () <UIWebViewDelegate> {
-	NSString *_outputFile;
-}
+@interface BNHtmlPdfKit () <UIWebViewDelegate>
+
 - (CGSize)_sizeFromPageSize:(BNPageSize)pageSize;
 
+@property (nonatomic, copy) NSString *outputFile;
 @property (nonatomic, strong) UIWebView *webView;
 
 @end
+
 
 @implementation BNHtmlPdfKit
 
