@@ -152,8 +152,17 @@
 
 	UIGraphicsEndPDFContext();
 
-	if ([_delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfData:)]) {
-		[_delegate htmlPdfKit:self didSavePdfData:currentReportData];
+	NSNumber *numberOfPages = [NSNumber numberWithInt:pages];
+	NSURL *mainDocumentURL = [[webView request] mainDocumentURL];
+	NSString *pageTitle = [webView stringByEvaluatingJavaScriptFromString:@"document.title"];
+    NSMutableDictionary *metadata = [NSMutableDictionary dictionary];
+
+    [metadata setValue:numberOfPages forKey:@"numberOfPages"];
+    [metadata setValue:mainDocumentURL forKey:@"mainDocumentURL"];
+    [metadata setValue:pageTitle forKey:@"pageTitle"];
+
+	if ([_delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfData:metadata:)]) {
+		[_delegate htmlPdfKit:self didSavePdfData:currentReportData metadata:metadata];
 	}
 
 	if (_outputFile) {

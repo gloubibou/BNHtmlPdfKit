@@ -168,7 +168,7 @@ Sent when pdf data has been generated.
 @param htmlPdfKit The `BNHtmlPdfKit` that data is being saved from.
 @param data The PDF data that was created from HTML/URL.
 */
-- (void)htmlPdfKit:(BNHtmlPdfKit *)htmlPdfKit didSavePdfData:(NSData *)data;
+- (void)htmlPdfKit:(BNHtmlPdfKit *)htmlPdfKit didSavePdfData:(NSData *)data metadata:(NSDictionary *)metadata;
 
 /**
 Sent when pdf data has been generated.
