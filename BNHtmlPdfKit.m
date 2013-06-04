@@ -45,6 +45,9 @@
 	NSString *_outputFile;
 }
 - (CGSize)_sizeFromPageSize:(BNPageSize)pageSize;
+
+@property (nonatomic, strong) UIWebView *webView;
+
 @end
 
 @implementation BNHtmlPdfKit
@@ -120,6 +123,9 @@
 
 	UIWebView *webView = [[UIWebView alloc] init];
 	webView.delegate = self;
+
+	self.webView = webView;
+	
 	[webView loadRequest:[NSURLRequest requestWithURL:url]];
 }
 
