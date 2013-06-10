@@ -142,6 +142,28 @@
 #pragma mark - UIWebViewDelegate
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
+	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+	NSURL *scriptURL = [bundle URLForResource:@"BNForceCSS" withExtension:@"js"];
+	NSString *script = [NSString stringWithContentsOfURL:scriptURL
+												encoding:NSUTF8StringEncoding
+												   error:NULL];
+
+	if (script != nil) {
+		NSString *injectScriptTemplate =
+			@"var bn_forceCSS_script = document.createElement('script');\n"
+			@"bn_forceCSS_script.setAttribute(\"type\", \"text/javascript\");\n"
+			@"bn_forceCSS_script.innerHTML = \"%@\"\n"
+			@"document.getElementsByTagName('body')[0].appendChild(bn_forceCSS_script);\n";
+
+		NSString *injectScript = [NSString stringWithFormat:injectScriptTemplate, script, nil];
+
+		id r0 = [webView stringByEvaluatingJavaScriptFromString:injectScript];
+		id r1 = [webView stringByEvaluatingJavaScriptFromString:@"bn_forceCSS()"];
+
+		NSLog(@"r1: %@", r0);
+		NSLog(@"r1: %@", r1);
+	}
+
 	UIPrintFormatter *formatter = webView.viewPrintFormatter;
 
 	BNHtmlPdfKitPageRenderer *renderer = [[BNHtmlPdfKitPageRenderer alloc] init];
