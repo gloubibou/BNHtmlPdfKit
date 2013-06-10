@@ -99,8 +99,12 @@
 - (void)saveHtmlAsPdf:(NSString *)html toFile:(NSString *)file {
 	self.outputFile = file;
 
-	UIWebView *webView = [[UIWebView alloc] init];
-	webView.delegate = self;
+	UIWebView *webView = [[UIWebView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
+
+	webView.delegate	= self;
+
+	self.webView		= webView;
+
 	[webView loadHTMLString:html baseURL:[NSURL URLWithString:@"http://localhost"]];
 }
 
@@ -109,14 +113,30 @@
 }
 
 - (void)saveUrlAsPdf:(NSURL *)url toFile:(NSString *)file {
-	self.outputFile = file;
+	[self saveRequestAsPdf:[NSURLRequest requestWithURL:url] toFile:file];
+}
 
-	UIWebView *webView = [[UIWebView alloc] init];
-	webView.delegate = self;
+- (void)saveRequestAsPdf:(NSURLRequest *)request {
+	[self saveRequestAsPdf:request toFile:nil];
+}
 
-	self.webView = webView;
-	
-	[webView loadRequest:[NSURLRequest requestWithURL:url]];
+- (void)saveRequestAsPdf:(NSURLRequest *)request toFile:(NSString *)file {
+	self.outputFile		= file;
+
+	UIWebView *webView = [[UIWebView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
+
+	webView.delegate	= self;
+
+	self.webView		= webView;
+
+	[webView loadRequest:request];
+}
+
+
+#pragma mark - Action methods
+
+- (void)stopAction:(id)sender {
+	[self.webView stopLoading];
 }
 
 #pragma mark - UIWebViewDelegate

@@ -125,7 +125,6 @@ Saves an html string to PDF data.
 */
 - (void)saveHtmlAsPdf:(NSString *)html;
 
-
 /**
 Saves an html string to a PDF file.
 
@@ -134,24 +133,44 @@ Saves an html string to a PDF file.
 - (void)saveHtmlAsPdf:(NSString *)html toFile:(NSString *)file;
 
 /**
-Saves an html string to PDF data.
+Saves page at URL to PDF data.
 
 @param url The URL to save as a pdf.
 */
 - (void)saveUrlAsPdf:(NSURL *)url;
 
-
 /**
-Saves an html string to a PDF file.
+Saves page at URL to a PDF file.
 
 @param url The URL to save as a pdf file.
 */
 - (void)saveUrlAsPdf:(NSURL *)url toFile:(NSString *)file;
 
 /**
+ Saves page returned from URL request to PDF data.
+
+ @param url The URL request to save as a pdf.
+ */
+- (void)saveRequestAsPdf:(NSURLRequest *)request;
+
+/**
+ Saves page returned from URL request to PDF file.
+
+ @param url The URL request to save as a pdf file.
+ */
+- (void)saveRequestAsPdf:(NSURLRequest *)request toFile:(NSString *)file;
+
+/**
+ Stop page loading. Skip saving.
+
+ @param sender Unused.
+ */
+- (void)stopAction:(id)sender;
+
+/**
 Determine the preferred paper size for general printing.
 
- @return paper size (currently: A4 or Letter)
+ @return paper size (currently: A4 or Letter).
  */
 + (BNPageSize)defaultPageSize;
 
@@ -188,7 +207,7 @@ Sent when pdf data has been generated.
 /**
 Sent when there was an error trying to generate the PDF.
 
-@param htmlPdfKit The `BNHtmlPdfKit` that theerror generated from.
+@param htmlPdfKit The `BNHtmlPdfKit` that the error generated from.
 */
 - (void)htmlPdfKit:(BNHtmlPdfKit *)htmlPdfKit didFailWithError:(NSError *)error;
 
