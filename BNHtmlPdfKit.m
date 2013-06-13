@@ -7,36 +7,14 @@
 
 #import "BNHtmlPdfKit.h"
 
+#import "BNHtmlPdfKitPageRenderer.h"
+
+
 #define PPI 72
 #define BNSizeMakeWithPPI(width, height) CGSizeMake(width * PPI, height * PPI)
 
 
-#pragma mark - BNHtmlPdfKitPageRenderer Interface
-
-@interface BNHtmlPdfKitPageRenderer : UIPrintPageRenderer
-
-@property (nonatomic, assign) CGFloat topAndBottomMarginSize;
-@property (nonatomic, assign) CGFloat leftAndRightMarginSize;
-
-@end
-
-
-#pragma mark - BNHtmlPdfKitPageRenderer Implementation
-
-@implementation BNHtmlPdfKitPageRenderer
-
-- (CGRect)paperRect {
-	return UIGraphicsGetPDFContextBounds();
-}
-
-- (CGRect)printableRect {
-	return CGRectInset([self paperRect], self.leftAndRightMarginSize, self.topAndBottomMarginSize);
-}
-
-@end
-
-
-#pragma mark - BNHtmlPdfKit Implementation
+#pragma mark - BNHtmlPdfKit Class Extension
 
 @interface BNHtmlPdfKit () <UIWebViewDelegate>
 
@@ -48,13 +26,15 @@
 @end
 
 
+#pragma mark - BNHtmlPdfKit Implementation
+
 @implementation BNHtmlPdfKit
 
 #pragma mark - Initializers
 
 - (id)init {
     if (self = [super init]) {
-        _pageSize = BNPageSizeLetter;
+        _pageSize = [BNHtmlPdfKit defaultPageSize];
 
 		// Default 1/4" margins
 		_topAndBottomMarginSize = 0.25f * 72.0f;
@@ -142,6 +122,9 @@
 #pragma mark - UIWebViewDelegate
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
+	NSURL *mainDocumentURL = [[webView request] mainDocumentURL];
+	NSString *pageTitle = [webView stringByEvaluatingJavaScriptFromString:@"document.title"];
+
 	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
 	NSURL *scriptURL = [bundle URLForResource:@"BNForceCSS" withExtension:@"js"];
 	NSString *script = [NSString stringWithContentsOfURL:scriptURL
@@ -157,16 +140,15 @@
 
 		NSString *injectScript = [NSString stringWithFormat:injectScriptTemplate, script, nil];
 
-		id r0 = [webView stringByEvaluatingJavaScriptFromString:injectScript];
-		id r1 = [webView stringByEvaluatingJavaScriptFromString:@"bn_forceCSS()"];
-
-		NSLog(@"r1: %@", r0);
-		NSLog(@"r1: %@", r1);
+		[webView stringByEvaluatingJavaScriptFromString:injectScript];
+		[webView stringByEvaluatingJavaScriptFromString:@"bn_forceCSS()"];
 	}
-
+	
 	UIPrintFormatter *formatter = webView.viewPrintFormatter;
 
 	BNHtmlPdfKitPageRenderer *renderer = [[BNHtmlPdfKitPageRenderer alloc] init];
+
+	renderer.pageTitle = [mainDocumentURL absoluteString];
 	renderer.topAndBottomMarginSize = self.topAndBottomMarginSize;
 	renderer.leftAndRightMarginSize = self.leftAndRightMarginSize;
 
@@ -181,18 +163,17 @@
 
 	[renderer prepareForDrawingPages:NSMakeRange(0, 1)];
 
-	int pages = [renderer numberOfPages];
+	NSInteger pages = [renderer numberOfPages];
 
-	for (int i = 0; i < pages; i++) {
+	for (NSInteger i = 0; i < pages; i++) {
 		UIGraphicsBeginPDFPage();
+		
 		[renderer drawPageAtIndex:i inRect:renderer.paperRect];
 	}
 
 	UIGraphicsEndPDFContext();
 
-	NSNumber *numberOfPages = [NSNumber numberWithInt:pages];
-	NSURL *mainDocumentURL = [[webView request] mainDocumentURL];
-	NSString *pageTitle = [webView stringByEvaluatingJavaScriptFromString:@"document.title"];
+	NSNumber *numberOfPages = [NSNumber numberWithInteger:pages];
     NSMutableDictionary *metadata = [NSMutableDictionary dictionary];
 
     [metadata setValue:numberOfPages forKey:@"numberOfPages"];
