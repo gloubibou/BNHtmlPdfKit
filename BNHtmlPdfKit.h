@@ -89,6 +89,16 @@ Left and Right page margins.
 @property (nonatomic, assign) CGFloat leftAndRightMarginSize;
 
 /**
+ Should print header with document name.
+ */
+@property (nonatomic, assign)       BOOL		printHeader;
+
+/**
+ Should print footer with document URL and page numbers.
+ */
+@property (nonatomic, assign)       BOOL		printFooter;
+
+/**
  The receiver's `delegate`.
 
  The `delegate` is sent messages when content is loading.
@@ -159,6 +169,24 @@ Saves page at URL to a PDF file.
  @param url The URL request to save as a pdf file.
  */
 - (void)saveRequestAsPdf:(NSURLRequest *)request toFile:(NSString *)file;
+
+/**
+ Saves document encoded in data to PDF data.
+
+ @param data The data to save as a pdf.
+ @param mimeType MIME type of the data. Passed to UIWebView
+ @param textEncodingName Text encoding type of the data. Passed to UIWebView
+ */
+- (void)saveDataAsPdf:(NSData *)data MIMEType:(NSString *)mimeType textEncodingName:(NSString *)textEncodingName;
+
+/**
+ Saves document encoded in data to PDF file.
+
+ @param data The data to save as a pdf.
+ @param mimeType MIME type of the data. Passed to UIWebView
+ @param textEncodingName Text encoding type of the data. Passed to UIWebView
+ */
+- (void)saveDataAsPdf:(NSData *)data MIMEType:(NSString *)mimeType textEncodingName:(NSString *)textEncodingName toFile:(NSString *)file;
 
 /**
  Stop page loading. Skip saving.

@@ -62,11 +62,44 @@
 		// Default 1/4" margins
 		_topAndBottomMarginSize = 0.25f * 72.0f;
 		_leftAndRightMarginSize = 0.25f * 72.0f;
+
+		_printHeader = YES;
+		_printFooter = YES;
 	}
 	return self;
 }
 
+- (void)dealloc
+{
+	[[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(_timeout) object:nil];
+
+	[_webView setDelegate:nil];
+	[_webView stopLoading];
+}
+
 #pragma mark - Methods
+
+- (void)setWebView:(UIWebView *)webView {
+	[[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(_timeout) object:nil];
+
+	[_webView setDelegate:nil];
+	[_webView stopLoading];
+
+	_webView = webView;
+}
+
+- (UIWebView *)createWebView {
+	UIWebView *webView = [[UIWebView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
+
+	webView.scalesPageToFit = YES;
+	webView.delegate = self;
+
+	if ([webView respondsToSelector:@selector(setSuppressesIncrementalRendering:)]) {
+		[webView setSuppressesIncrementalRendering:YES];
+	}
+
+	return webView;
+}
 
 - (CGSize)actualPageSize {
 	return [self _sizeFromPageSize:self.pageSize];
@@ -77,13 +110,9 @@
 }
 
 - (void)saveHtmlAsPdf:(NSString *)html toFile:(NSString *)file {
+	UIWebView *webView = self.webView = [self createWebView];
+	
 	self.outputFile = file;
-
-	UIWebView *webView = [[UIWebView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
-
-	webView.delegate	= self;
-
-	self.webView		= webView;
 
 	[webView loadHTMLString:html baseURL:[NSURL URLWithString:@"http://localhost"]];
 }
@@ -101,17 +130,24 @@
 }
 
 - (void)saveRequestAsPdf:(NSURLRequest *)request toFile:(NSString *)file {
-	self.outputFile		= file;
+	UIWebView *webView = self.webView = [self createWebView];
 
-	UIWebView *webView = [[UIWebView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
-
-	webView.delegate	= self;
-
-	self.webView		= webView;
+	self.outputFile = file;
 
 	[webView loadRequest:request];
 }
 
+- (void)saveDataAsPdf:(NSData *)data MIMEType:(NSString *)mimeType textEncodingName:(NSString *)textEncodingName {
+	[self saveDataAsPdf:data MIMEType:mimeType textEncodingName:textEncodingName toFile:nil];
+}
+
+- (void)saveDataAsPdf:(NSData *)data MIMEType:(NSString *)mimeType textEncodingName:(NSString *)textEncodingName toFile:(NSString *)file {
+	UIWebView *webView = self.webView = [self createWebView];
+
+	self.outputFile = file;
+
+	[webView loadData:data MIMEType:mimeType textEncodingName:textEncodingName baseURL:nil];
+}
 
 #pragma mark - Action methods
 
@@ -122,78 +158,16 @@
 #pragma mark - UIWebViewDelegate
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
-	NSURL *mainDocumentURL = [[webView request] mainDocumentURL];
-	NSString *pageTitle = [webView stringByEvaluatingJavaScriptFromString:@"document.title"];
+	NSString	*readyState = [webView stringByEvaluatingJavaScriptFromString:@"document.readyState"];
+	BOOL		complete	= [readyState isEqualToString:@"complete"];
 
-	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
-	NSURL *scriptURL = [bundle URLForResource:@"BNForceCSS" withExtension:@"js"];
-	NSString *script = [NSString stringWithContentsOfURL:scriptURL
-												encoding:NSUTF8StringEncoding
-												   error:NULL];
+	[[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(_timeout) object:nil];
 
-	if (script != nil) {
-		NSString *injectScriptTemplate =
-			@"var bn_forceCSS_script = document.createElement('script');\n"
-			@"bn_forceCSS_script.setAttribute(\"type\", \"text/javascript\");\n"
-			@"bn_forceCSS_script.innerHTML = \"%@\"\n"
-			@"document.getElementsByTagName('body')[0].appendChild(bn_forceCSS_script);\n";
-
-		NSString *injectScript = [NSString stringWithFormat:injectScriptTemplate, script, nil];
-
-		[webView stringByEvaluatingJavaScriptFromString:injectScript];
-		[webView stringByEvaluatingJavaScriptFromString:@"bn_forceCSS()"];
+	if (complete) {
+		[self _savePdf];
 	}
-	
-	UIPrintFormatter *formatter = webView.viewPrintFormatter;
-
-	BNHtmlPdfKitPageRenderer *renderer = [[BNHtmlPdfKitPageRenderer alloc] init];
-
-	renderer.pageTitle = [mainDocumentURL absoluteString];
-	renderer.topAndBottomMarginSize = self.topAndBottomMarginSize;
-	renderer.leftAndRightMarginSize = self.leftAndRightMarginSize;
-
-	[renderer addPrintFormatter:formatter startingAtPageAtIndex:0];
-
-	NSMutableData *currentReportData = [NSMutableData data];
-
-    CGSize pageSize = [self actualPageSize];
-    CGRect pageRect = CGRectMake(0, 0, pageSize.width, pageSize.height);
-
-	UIGraphicsBeginPDFContextToData(currentReportData, pageRect, nil);
-
-	[renderer prepareForDrawingPages:NSMakeRange(0, 1)];
-
-	NSInteger pages = [renderer numberOfPages];
-
-	for (NSInteger i = 0; i < pages; i++) {
-		UIGraphicsBeginPDFPage();
-		
-		[renderer drawPageAtIndex:i inRect:renderer.paperRect];
-	}
-
-	UIGraphicsEndPDFContext();
-
-	NSNumber *numberOfPages = [NSNumber numberWithInteger:pages];
-    NSMutableDictionary *metadata = [NSMutableDictionary dictionary];
-
-    [metadata setValue:numberOfPages forKey:@"numberOfPages"];
-    [metadata setValue:mainDocumentURL forKey:@"mainDocumentURL"];
-    [metadata setValue:pageTitle forKey:@"pageTitle"];
-
-	id <BNHtmlPdfKitDelegate> delegate = self.delegate;
-	
-	if ([delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfData:metadata:)]) {
-		[delegate htmlPdfKit:self didSavePdfData:currentReportData metadata:metadata];
-	}
-
-	NSString *outputFile = self.outputFile;
-	
-	if (outputFile) {
-		[currentReportData writeToFile:outputFile atomically:YES];
-
-		if ([delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfFile:)]) {
-			[delegate htmlPdfKit:self didSavePdfFile:outputFile];
-		}
+	else {
+		[self performSelector:@selector(_timeout) withObject:nil afterDelay:1.0f];
 	}
 }
 
@@ -203,6 +177,8 @@
 	if ([delegate respondsToSelector:@selector(htmlPdfKit:didFailWithError:)]) {
 		[delegate htmlPdfKit:self didFailWithError:error];
 	}
+
+	self.webView = nil;
 }
 
 #pragma mark - Private Methods
@@ -230,7 +206,7 @@
 		case BNPageSizeA3:
 			return BNSizeMakeWithPPI(11.69f, 16.54f);
 		case BNPageSizeA4:
-			return BNSizeMakeWithPPI(8.27f, 11.69f);
+			return BNSizeMakeWithPPI(8.26666667, 11.6916667);
 		case BNPageSizeA5:
 			return BNSizeMakeWithPPI(5.83f, 8.27f);
 		case BNPageSizeA6:
@@ -319,6 +295,96 @@
 	return CGSizeZero;
 }
 
+- (void)_timeout {
+	[self _savePdf];
+}
+
+- (void)_savePdf {
+	UIWebView *webView = self.webView;
+
+	if (webView == nil) {
+		return;
+	}
+
+	NSURLRequest *request = [webView request];
+	NSURL *mainDocumentURL = [request mainDocumentURL];
+	NSString *pageTitle = [webView stringByEvaluatingJavaScriptFromString:@"document.title"];
+	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+	NSURL *scriptURL = [bundle URLForResource:@"BNForceCSS" withExtension:@"js"];
+	NSString *script = [NSString stringWithContentsOfURL:scriptURL
+												encoding:NSUTF8StringEncoding
+												   error:NULL];
+
+	if (script != nil) {
+		NSString *injectScriptTemplate =
+		@"var bn_forceCSS_script = document.createElement('script');\n"
+		@"bn_forceCSS_script.setAttribute(\"type\", \"text/javascript\");\n"
+		@"bn_forceCSS_script.innerHTML = \"%@\"\n"
+		@"document.getElementsByTagName('body')[0].appendChild(bn_forceCSS_script);\n";
+
+		NSString *injectScript = [NSString stringWithFormat:injectScriptTemplate, script, nil];
+
+		[webView stringByEvaluatingJavaScriptFromString:injectScript];
+		[webView stringByEvaluatingJavaScriptFromString:@"bn_forceCSS()"];
+	}
+
+	UIPrintFormatter *formatter = webView.viewPrintFormatter;
+
+	BNHtmlPdfKitPageRenderer *renderer = [[BNHtmlPdfKitPageRenderer alloc] init];
+
+	renderer.pageTitle = [mainDocumentURL absoluteString];
+	renderer.printFooter = self.printFooter;
+	renderer.printHeader = self.printHeader;
+	renderer.topAndBottomMarginSize = self.topAndBottomMarginSize;
+	renderer.leftAndRightMarginSize = self.leftAndRightMarginSize;
+
+	[renderer addPrintFormatter:formatter startingAtPageAtIndex:0];
+
+	NSMutableData *currentReportData = [NSMutableData data];
+
+    CGSize pageSize = [self actualPageSize];
+    CGRect pageRect = CGRectMake(0, 0, pageSize.width, pageSize.height);
+
+	UIGraphicsBeginPDFContextToData(currentReportData, pageRect, nil);
+
+	[renderer prepareForDrawingPages:NSMakeRange(0, 1)];
+
+	NSInteger pages = [renderer numberOfPages];
+
+	for (NSInteger i = 0; i < pages; i++) {
+		UIGraphicsBeginPDFPage();
+
+		[renderer drawPageAtIndex:i inRect:renderer.paperRect];
+	}
+
+	UIGraphicsEndPDFContext();
+
+	NSNumber *numberOfPages = [NSNumber numberWithInteger:pages];
+    NSMutableDictionary *metadata = [NSMutableDictionary dictionary];
+
+    [metadata setValue:numberOfPages forKey:@"numberOfPages"];
+    [metadata setValue:mainDocumentURL forKey:@"mainDocumentURL"];
+    [metadata setValue:pageTitle forKey:@"pageTitle"];
+
+	id <BNHtmlPdfKitDelegate> delegate = self.delegate;
+
+	if ([delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfData:metadata:)]) {
+		[delegate htmlPdfKit:self didSavePdfData:currentReportData metadata:metadata];
+	}
+
+	NSString *outputFile = self.outputFile;
+
+	if (outputFile) {
+		[currentReportData writeToFile:outputFile atomically:YES];
+
+		if ([delegate respondsToSelector:@selector(htmlPdfKit:didSavePdfFile:)]) {
+			[delegate htmlPdfKit:self didSavePdfFile:outputFile];
+		}
+	}
+
+	self.webView = nil;
+}
+
 #pragma mark - Class Methods
 
 + (BNPageSize)defaultPageSize
@@ -332,3 +398,9 @@
 
 @end
 
+
+@interface UIWebView (iOS_6)
+
+- (void)setSuppressesIncrementalRendering:(BOOL)suppressesIncrementalRendering;
+
+@end

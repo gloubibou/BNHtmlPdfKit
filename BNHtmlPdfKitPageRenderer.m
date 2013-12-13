@@ -30,6 +30,8 @@
 	self = [super init];
 
 	if (self != nil) {
+		_printHeader		= YES;
+		_printFooter		= YES;
 		_headerFooterFont	= [UIFont fontWithName:@"Helvetica" size:12.0f];
 
 		CGSize	headerFooterSize	= [@"Sample" sizeWithFont : _headerFooterFont];
@@ -63,48 +65,52 @@
 
 - (void)drawHeaderForPageAtIndex:(NSInteger)pageIndex inRect:(CGRect)headerRect
 {
-	NSString *pageTitle = self.pageTitle;
+	if (self.printHeader) {
+		NSString *pageTitle = self.pageTitle;
 
-	if (pageTitle != nil) {
-		UIFont	*headerFooterFont	= self.headerFooterFont;
+		if (pageTitle != nil) {
+			UIFont	*headerFooterFont	= self.headerFooterFont;
 
-		CGFloat startX				= CGRectGetMinX(headerRect) + HEADER_LEFT_TEXT_INSET;
-		CGFloat startY				= self.printableRect.origin.y + HEADER_FOOTER_MARGIN_PADDING;
-		CGPoint startPoint			= CGPointMake(startX, startY);
+			CGFloat startX				= CGRectGetMinX(headerRect) + HEADER_LEFT_TEXT_INSET;
+			CGFloat startY				= self.printableRect.origin.y + HEADER_FOOTER_MARGIN_PADDING;
+			CGPoint startPoint			= CGPointMake(startX, startY);
 
-		[pageTitle drawAtPoint:startPoint withFont:headerFooterFont];
+			[pageTitle drawAtPoint:startPoint withFont:headerFooterFont];
+		}
 	}
 }
 
 - (void)drawFooterForPageAtIndex:(NSInteger)pageIndex inRect:(CGRect)footerRect
 {
-	UIFont		*headerFooterFont	= self.headerFooterFont;
+	if (self.printFooter) {
+		UIFont		*headerFooterFont	= self.headerFooterFont;
 
-	NSString	*timestampString	= self.timestampString;
+		NSString	*timestampString	= self.timestampString;
 
-	if (timestampString != nil) {
-		CGSize	timestampStringSize = [timestampString sizeWithFont:headerFooterFont];
+		if (timestampString != nil) {
+			CGSize	timestampStringSize = [timestampString sizeWithFont:headerFooterFont];
 
-		CGFloat startX				= CGRectGetMinX(footerRect) + HEADER_LEFT_TEXT_INSET;
-		CGFloat startY				= CGRectGetMaxY(self.printableRect) - timestampStringSize.height - HEADER_FOOTER_MARGIN_PADDING;
-		CGPoint startPoint			= CGPointMake(startX, startY);
+			CGFloat startX				= CGRectGetMinX(footerRect) + HEADER_LEFT_TEXT_INSET;
+			CGFloat startY				= CGRectGetMaxY(self.printableRect) - timestampStringSize.height - HEADER_FOOTER_MARGIN_PADDING;
+			CGPoint startPoint			= CGPointMake(startX, startY);
 
-		[timestampString drawAtPoint:startPoint withFont:headerFooterFont];
-	}
+			[timestampString drawAtPoint:startPoint withFont:headerFooterFont];
+		}
 
-	{
-		NSString	*localizedPageNumberString	= NSLocalizedString(@"Page %d of %d", @"BNHtmlPdfKit: Page Count String");
-		NSRange		pageRange					= self.pageRange;
-		NSString	*pageNumberString			= [NSString stringWithFormat:localizedPageNumberString,
-												   pageIndex + 1 - pageRange.location, pageRange.length];
+		{
+			NSString	*localizedPageNumberString	= NSLocalizedString(@"Page %d of %d", @"BNHtmlPdfKit: Page Count String");
+			NSRange		pageRange					= self.pageRange;
+			NSString	*pageNumberString			= [NSString stringWithFormat:localizedPageNumberString,
+													   pageIndex + 1 - pageRange.location, pageRange.length];
 
-		CGSize		pageNumSize					= [pageNumberString sizeWithFont:headerFooterFont];
+			CGSize		pageNumSize					= [pageNumberString sizeWithFont:headerFooterFont];
 
-		CGFloat		startX						= CGRectGetMaxX(footerRect) - pageNumSize.width - FOOTER_RIGHT_TEXT_INSET;
-		CGFloat		startY						= CGRectGetMaxY(self.printableRect) - pageNumSize.height - HEADER_FOOTER_MARGIN_PADDING;
-		CGPoint		startPoint					= CGPointMake(startX, startY);
+			CGFloat		startX						= CGRectGetMaxX(footerRect) - pageNumSize.width - FOOTER_RIGHT_TEXT_INSET;
+			CGFloat		startY						= CGRectGetMaxY(self.printableRect) - pageNumSize.height - HEADER_FOOTER_MARGIN_PADDING;
+			CGPoint		startPoint					= CGPointMake(startX, startY);
 
-		[pageNumberString drawAtPoint:startPoint withFont:headerFooterFont];
+			[pageNumberString drawAtPoint:startPoint withFont:headerFooterFont];
+		}
 	}
 }
 

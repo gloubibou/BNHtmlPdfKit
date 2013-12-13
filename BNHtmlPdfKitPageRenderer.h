@@ -13,6 +13,9 @@
 
 @property (nonatomic, copy)         NSString	*pageTitle;
 
+@property (nonatomic, assign)       BOOL		printHeader;
+@property (nonatomic, assign)       BOOL		printFooter;
+
 @property (nonatomic, assign)       CGFloat		topAndBottomMarginSize;
 @property (nonatomic, assign)       CGFloat		leftAndRightMarginSize;
 
